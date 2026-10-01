@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador Chrome: Aprende los elementos del navegador</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+        }
+
+        /* Efectos visuales de pulso para hotspots */
+        .hotspot-pulse {
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+
+        /* Animaciones personalizadas */
+        .card-drag {
+            touch-action: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .card-drag:hover {
+            transform: translateY(-2px);
+        }
+
+        .drop-target-active {
+            border-color: #3b82f6 !important;
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+
+        .drop-target-correct {
+            border-color: #22c55e !important;
+            background-color: rgba(34, 197, 94, 0.2) !important;
+        }
+
+        .drop-target-wrong {
+            border-color: #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.2) !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header del Juego -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <!-- Logo y Título -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-red-500 to-yellow-400 p-0.5 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
+                        <i class="fa-brands fa-chrome text-2xl text-blue-400"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-xl text-white tracking-tight flex items-center gap-2">
+                        Chrome Master
+                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-semibold border border-blue-500/30">EduGame</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Aprende los elementos de la interfaz de Google Chrome</p>
+                </div>
+            </div>
+
+            <!-- Modos de Juego -->
+            <div class="flex items-center gap-1 sm:gap-2 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+                <button id="btn-mode-explore" onclick="setGameMode('explore')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-blue-600 text-white shadow-md">
+                    <i class="fa-solid fa-compass"></i> Explorar
+                </button>
+                <button id="btn-mode-match" onclick="setGameMode('match')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-object-group"></i> Relacionar
+                </button>
+                <button id="btn-mode-quiz" onclick="setGameMode('quiz')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-yellow-400"></i> Desafío
+                </button>
+            </div>
+
+            <!-- Puntuación y Sonido -->
+            <div class="flex items-center gap-4">
+                <div id="score-container" class="hidden flex items-center gap-3 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl">
+                    <div class="text-xs">
+                        <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-bold">Puntos</span>
+                        <span id="score-val" class="font-bold text-yellow-400 text-base">0</span>
+                    </div>
+                    <div id="timer-box" class="text-xs border-l border-slate-700 pl-3 hidden">
+                        <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-bold">Tiempo</span>
+                        <span id="timer-val" class="font-bold text-emerald-400 text-base">120:00</span>
+                    </div>
+                </div>
+
+                <button id="sound-btn" onclick="toggleSound()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-all">
+                    <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-6">
+
+        <!-- Banner de Instrucciones / Estado -->
+        <div id="instruction-banner" class="bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg font-bold shrink-0">
+                    <i class="fa-solid fa-lightbulb" id="mode-icon"></i>
+                </div>
+                <div>
+                    <h2 id="mode-title" class="font-bold text-white text-base">Modo Exploración Libre</h2>
+                    <p id="mode-desc" class="text-xs text-slate-300">Pasa el cursor o toca cada zona resaltada en la ventana del navegador para descubrir su nombre y función.</p>
+                </div>
+            </div>
+
+            <div id="action-buttons-banner" class="flex items-center gap-2">
+                <button id="btn-reset" onclick="resetCurrentGame()" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+
+        <!-- Layout Central: Ventana del Navegador + Panel de Elementos -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Ventana del Navegador Mapeada (9 Columnas en escritorio) -->
+            <div class="lg:col-span-8 bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden relative">
+                
+                <!-- Ventana Estilo Chrome Mockup -->
+                <div class="w-full bg-[#202124] text-slate-200 select-none relative pb-2">
+                    
+                    <!-- 1. Fila de Pestañas y Controles de Ventana -->
+                    <div class="flex items-center justify-between px-2 pt-2 bg-[#1d1f21] border-b border-[#292a2d] relative">
+                        
+                        <!-- Pestañas -->
+                        <div class="flex items-center space-x-1 overflow-x-auto pr-4 scrollbar-none flex-1">
+                            <!-- Target Hotspot: Pestaña Activa -->
+                            <div class="chrome-element-hotspot relative group cursor-pointer" data-id="pestaña">
+                                <div class="bg-[#202124] text-slate-200 text-xs px-3 py-1.5 rounded-t-lg flex items-center gap-2 border-t border-x border-[#3c4043] w-40 sm:w-48 shadow-md">
+                                    <i class="fa-brands fa-google text-blue-400 text-xs"></i>
+                                    <span class="truncate font-medium text-[11px]">Google - Buscar</span>
+                                    <span class="ml-auto hover:bg-slate-700 rounded-full w-4 h-4 flex items-center justify-center text-[10px] text-slate-400">×</span>
+                                </div>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-t-lg absolute inset-0 flex items-center justify-center transition-all opacity-0 pointer-events-none" data-zone="pestaña">
+                                    <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold">Pestaña</span>
+                                </div>
+                            </div>
+
+                            <!-- Target Hotspot: Pestaña Inactiva -->
+                            <div class="hidden sm:flex text-slate-400 text-xs px-3 py-1.5 rounded-t-lg items-center gap-2 w-32 opacity-70 border-t border-x border-transparent hover:bg-slate-800/40">
+                                <i class="fa-solid fa-globe text-xs"></i>
+                                <span class="truncate font-medium text-[11px]">Wikipedia</span>
+                            </div>
+
+                            <!-- Target Hotspot: Botón Nueva Pestaña -->
+                            <div class="chrome-element-hotspot relative p-1 hover:bg-[#3c4043] rounded-full text-slate-300 text-xs cursor-pointer" data-id="nueva-pestana">
+                                <i class="fa-solid fa-plus px-1.5 py-1"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-1 flex items-center justify-center opacity-0 pointer-events-none" data-zone="nueva-pestana"></div>
+                            </div>
+                        </div>
+
+                        <!-- Target Hotspot: Botones de Control de Ventana (Minimizar, Maximizar, Cerrar) -->
+                        <div class="chrome-element-hotspot relative flex items-center gap-3 px-2 py-1 text-slate-400 text-xs cursor-pointer group" data-id="controles-ventana">
+                            <span class="hover:text-white"><i class="fa-solid fa-minus"></i></span>
+                            <span class="hover:text-white"><i class="fa-regular fa-square"></i></span>
+                            <span class="hover:text-red-400"><i class="fa-solid fa-xmark"></i></span>
+                            <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none" data-zone="controles-ventana"></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Fila de Navegación y Barra de Direcciones (Omnibox) -->
+                    <div class="bg-[#202124] p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 border-b border-[#292a2d]">
+                        
+                        <!-- Controles de Historial & Recargar -->
+                        <div class="flex items-center gap-1">
+                            <!-- Target Hotspot: Atrás -->
+                            <div class="chrome-element-hotspot relative p-1.5 hover:bg-[#3c4043] rounded-full text-slate-300 text-xs cursor-pointer" data-id="boton-atras" title="Atrás">
+                                <i class="fa-solid fa-arrow-left"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="boton-atras"></div>
+                            </div>
+
+                            <!-- Target Hotspot: Adelante -->
+                            <div class="chrome-element-hotspot relative p-1.5 hover:bg-[#3c4043] rounded-full text-slate-400 text-xs cursor-pointer" data-id="boton-adelante" title="Adelante">
+                                <i class="fa-solid fa-arrow-right"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="boton-adelante"></div>
+                            </div>
+
+                            <!-- Target Hotspot: Recargar -->
+                            <div class="chrome-element-hotspot relative p-1.5 hover:bg-[#3c4043] rounded-full text-slate-300 text-xs cursor-pointer" data-id="boton-recargar" title="Recargar">
+                                <i class="fa-solid fa-rotate-right"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="boton-recargar"></div>
+                            </div>
+                        </div>
+
+                        <!-- Target Hotspot: Omnibox / Barra de Direcciones -->
+                        <div class="chrome-element-hotspot flex-1 relative cursor-pointer" data-id="omnibox">
+                            <div class="bg-[#28292c] hover:bg-[#303134] text-slate-200 text-xs rounded-full px-3 py-1.5 flex items-center gap-2 border border-[#3c4043] shadow-inner">
+                                <i class="fa-solid fa-lock text-emerald-400 text-[10px]"></i>
+                                <span class="text-slate-400 font-normal">https://</span>
+                                <span class="font-medium text-slate-100 flex-1 truncate">www.google.com</span>
+                                
+                                <!-- Target Hotspot: Marcadores / Estrella (Anidado con parada de propagación) -->
+                                <div class="chrome-element-hotspot p-1 hover:bg-[#3c4043] rounded-full text-slate-400 hover:text-yellow-400 transition-colors cursor-pointer" data-id="estrella-marcadores" onclick="event.stopPropagation()">
+                                    <i class="fa-regular fa-star"></i>
+                                    <div class="drop-zone border-2 border-dashed border-yellow-400/60 bg-yellow-500/10 rounded-full absolute -inset-1 flex items-center justify-center opacity-0 pointer-events-none" data-zone="estrella-marcadores"></div>
+                                </div>
+                            </div>
+                            <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none" data-zone="omnibox">
+                                <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold">Barra de Direcciones / Omnibox</span>
+                            </div>
+                        </div>
+
+                        <!-- Iconos de Perfil, Extensiones y Menú -->
+                        <div class="flex items-center gap-1">
+                            <!-- Target Hotspot: Extensiones -->
+                            <div class="chrome-element-hotspot relative p-1.5 hover:bg-[#3c4043] rounded-full text-slate-300 text-xs cursor-pointer" data-id="extensiones">
+                                <i class="fa-solid fa-puzzle-piece"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="extensiones"></div>
+                            </div>
+
+                            <!-- Target Hotspot: Perfil de Usuario -->
+                            <div class="chrome-element-hotspot relative p-1 hover:bg-[#3c4043] rounded-full cursor-pointer" data-id="perfil-usuario">
+                                <div class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
+                                    A
+                                </div>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="perfil-usuario"></div>
+                            </div>
+
+                            <!-- Target Hotspot: Menú de Opciones (Tres Puntos) -->
+                            <div class="chrome-element-hotspot relative p-1.5 hover:bg-[#3c4043] rounded-full text-slate-300 text-xs cursor-pointer" data-id="menu-opciones">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded-full absolute -inset-0.5 flex items-center justify-center opacity-0 pointer-events-none" data-zone="menu-opciones"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 3. Barra de Marcadores -->
+                    <div class="chrome-element-hotspot relative bg-[#202124] px-3 py-1 flex items-center gap-3 border-b border-[#292a2d] text-[11px] text-slate-300 cursor-pointer overflow-x-auto" data-id="barra-marcadores">
+                        <div class="flex items-center gap-1.5 hover:bg-[#3c4043] px-2 py-0.5 rounded cursor-pointer">
+                            <i class="fa-solid fa-folder text-amber-400 text-xs"></i>
+                            <span>Escuela</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 hover:bg-[#3c4043] px-2 py-0.5 rounded cursor-pointer">
+                            <i class="fa-brands fa-youtube text-red-500 text-xs"></i>
+                            <span>YouTube</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 hover:bg-[#3c4043] px-2 py-0.5 rounded cursor-pointer">
+                            <i class="fa-solid fa-envelope text-blue-400 text-xs"></i>
+                            <span>Gmail</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 hover:bg-[#3c4043] px-2 py-0.5 rounded cursor-pointer">
+                            <i class="fa-solid fa-cloud text-sky-400 text-xs"></i>
+                            <span>Google Drive</span>
+                        </div>
+
+                        <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none" data-zone="barra-marcadores">
+                            <span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold">Barra de Marcadores</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Área de Contenido Web Principal -->
+                    <div class="chrome-element-hotspot relative min-h-[280px] sm:min-h-[340px] bg-[#303134] p-6 flex flex-col items-center justify-center text-center cursor-pointer" data-id="area-contenido">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-4xl font-extrabold text-blue-500">G</span>
+                            <span class="text-4xl font-extrabold text-red-500">o</span>
+                            <span class="text-4xl font-extrabold text-yellow-500">o</span>
+                            <span class="text-4xl font-extrabold text-blue-500">g</span>
+                            <span class="text-4xl font-extrabold text-green-500">l</span>
+                            <span class="text-4xl font-extrabold text-red-500">e</span>
+                        </div>
+                        <div class="w-full max-w-md bg-[#202124] border border-slate-700 rounded-full px-4 py-2 flex items-center gap-3 text-slate-400 text-xs shadow-lg mb-4">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>Buscar en Google o escribir una URL</span>
+                            <i class="fa-solid fa-microphone ml-auto text-blue-400"></i>
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                            Área de visualización del sitio web
+                        </div>
+
+                        <div class="drop-zone border-2 border-dashed border-blue-400/50 bg-blue-500/10 rounded absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none" data-zone="area-contenido">
+                            <span class="text-xs bg-blue-600 text-white px-3 py-1 rounded-full font-bold">Área de Contenido Web</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Overlay de Guía o Mensaje Visual -->
+                <div id="canvas-overlay" class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] pointer-events-none flex items-center justify-center transition-opacity opacity-0">
+                    <div id="overlay-msg" class="bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-2xl"></div>
+                </div>
+
+            </div>
+
+            <!-- Panel Lateral de Juego e Información (3 Columnas) -->
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                
+                <!-- Tarjeta Info en Modo Exploración -->
+                <div id="info-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between min-h-[280px]">
+                    <div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div id="info-badge-icon" class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-hand-pointer"></i>
+                            </div>
+                            <div>
+                                <h3 id="info-title" class="font-bold text-base text-white">Haz clic en un elemento</h3>
+                                <span id="info-tag" class="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">Guía didáctica</span>
+                            </div>
+                        </div>
+
+                        <p id="info-desc" class="text-xs text-slate-300 leading-relaxed mb-4">
+                            Selecciona cualquier zona marcada en el navegador de arriba para ver su nombre oficial, su función principal y accesos directos de teclado.
+                        </p>
+
+                        <div id="info-extra" class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/80 space-y-2 hidden">
+                            <div class="text-[11px] text-slate-400">
+                                <strong class="text-blue-400 block mb-0.5">¿Para qué sirve?</strong>
+                                <span id="info-purpose">--</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400">
+                                <strong class="text-amber-400 block mb-0.5">Atajo de teclado (opcional):</strong>
+                                <code id="info-shortcut" class="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px]">--</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between items-center">
+                        <span>Elementos descubiertos:</span>
+                        <span id="discovered-count" class="font-bold text-blue-400">0 / 13</span>
+                    </div>
+                </div>
+
+                <!-- Panel de Fichas para Arrastrar / Relacionar -->
+                <div id="match-card-panel" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hidden flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-blue-400"></i> Elementos disponibles
+                        </h3>
+                        <span id="cards-remaining" class="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">12 restantes</span>
+                    </div>
+
+                    <p class="text-xs text-slate-400">Haz clic en una ficha para seleccionarla y luego en la zona correspondiente dentro del navegador, o arrástrala.</p>
+
+                    <!-- Lista de Fichas Seleccionables / Drag & Drop -->
+                    <div id="cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 max-h-[320px] overflow-y-auto pr-1">
+                        <!-- Se genera dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Panel de Preguntas en Modo Desafío Flash -->
+                <div id="quiz-card-panel" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hidden flex-col justify-between gap-4 min-h-[280px]">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="quiz-step" class="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">Pregunta 1 de 10</span>
+                            <span id="quiz-streak" class="text-[10px] font-bold text-amber-400"><i class="fa-solid fa-fire"></i> Racha: 0</span>
+                        </div>
+
+                        <h3 id="quiz-question" class="font-bold text-sm sm:text-base text-white mb-2">¿Dónde se encuentra la Barra de Direcciones u Omnibox?</h3>
+                        <p id="quiz-hint" class="text-xs text-slate-400 italic">Haz clic directamente sobre el elemento dentro de la ventana de Google Chrome.</p>
+                    </div>
+
+                    <div id="quiz-feedback" class="hidden p-3 rounded-xl border text-xs font-semibold text-center">
+                        <!-- Retroalimentación rápida de la respuesta -->
+                    </div>
+
+                    <button id="btn-next-question" onclick="nextQuizQuestion()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2">
+                        Siguiente pregunta <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal de Victoria / Resultados Finales -->
+    <div id="modal-victory" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl relative animate-in fade-in zoom-in duration-300">
+            
+            <div class="w-20 h-20 bg-gradient-to-tr from-yellow-400 to-amber-600 rounded-2xl mx-auto flex items-center justify-center text-3xl text-slate-950 font-black mb-4 shadow-xl shadow-amber-500/20">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+
+            <h3 class="text-2xl font-extrabold text-white mb-1">¡Excelente Trabajo!</h3>
+            <p class="text-xs text-slate-400 mb-6">Has demostrado un gran dominio de los componentes de Google Chrome.</p>
+
+            <div class="bg-slate-950 rounded-2xl p-4 border border-slate-800/80 grid grid-cols-2 gap-4 mb-6">
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Puntuación Total</span>
+                    <span id="modal-score-val" class="text-2xl font-black text-yellow-400">100</span>
+                </div>
+                <div class="text-center border-l border-slate-800">
+                    <span class="text-[10px] text-slate-400 uppercase font-bold block">Precisión</span>
+                    <span id="modal-accuracy-val" class="text-2xl font-black text-emerald-400">100%</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="restartMode()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Jugar de nuevo
+                </button>
+                <button onclick="closeVictoryModal(); setGameMode('explore');" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold text-xs border border-slate-700 transition-all">
+                    Volver a Exploración
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900/60 border-t border-slate-800/80 py-3 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Google Chrome Educational Tool &copy; 2026</span>
+            <span class="text-[11px] text-slate-400">Diseñado para aprendizaje interactivo y práctico de informática</span>
+        </div>
+    </footer>
+
+    <script>
+        // Base de datos de elementos de la interfaz de Chrome
+        const CHROME_ELEMENTS = [
+            {
+                id: 'pestaña',
+                name: 'Pestaña (Tab)',
+                category: 'Navegación',
+                icon: 'fa-regular fa-folder-closed',
+                purpose: 'Muestra el sitio web actual. Puedes tener múltiples pestañas abiertas al mismo tiempo en una sola ventana.',
+                shortcut: 'Ctrl + T (Nueva pestaña)',
+                question: '¿Qué elemento representa cada página web individual abierta en la ventana?'
+            },
+            {
+                id: 'nueva-pestana',
+                name: 'Botón Nueva Pestaña (+)',
+                category: 'Navegación',
+                icon: 'fa-solid fa-plus',
+                purpose: 'Abre un nuevo espacio de navegación limpio o la página principal de Google.',
+                shortcut: 'Ctrl + T',
+                question: '¿Dónde haces clic si deseas abrir una página web adicional sin cerrar la actual?'
+            },
+            {
+                id: 'boton-atras',
+                name: 'Botón Atrás',
+                category: 'Controles',
+                icon: 'fa-solid fa-arrow-left',
+                purpose: 'Te regresa a la página web que estabas visitando anteriormente en el historial.',
+                shortcut: 'Alt + Flecha Izquierda',
+                question: '¿Qué botón te permite regresar a la página anterior que viste?'
+            },
+            {
+                id: 'boton-adelante',
+                name: 'Botón Adelante',
+                category: 'Controles',
+                icon: 'fa-solid fa-arrow-right',
+                purpose: 'Avanza a la página web siguiente si retrocediste previamente con el botón atrás.',
+                shortcut: 'Alt + Flecha Derecha',
+                question: '¿Con cuál botón avanzas de nuevo tras haber vuelto hacia atrás?'
+            },
+            {
+                id: 'boton-recargar',
+                name: 'Botón Recargar / Actualizar',
+                category: 'Controles',
+                icon: 'fa-solid fa-rotate-right',
+                purpose: 'Vuelve a cargar el contenido actualizado de la página actual.',
+                shortcut: 'Ctrl + R  o  F5',
+                question: '¿Qué botón actualiza o vuelve a cargar el contenido del sitio web?'
+            },
+            {
+                id: 'omnibox',
+                name: 'Barra de Direcciones (Omnibox)',
+                category: 'Búsqueda & URL',
+                icon: 'fa-solid fa-italic',
+                purpose: 'Lugar principal donde escribes las direcciones URL (sitios web) o realizas búsquedas directas en Google.',
+                shortcut: 'Ctrl + L  o  Alt + D',
+                question: '¿Dónde se escribe la dirección URL (por ejemplo: www.google.com) o términos de búsqueda?'
+            },
+            {
+                id: 'estrella-marcadores',
+                name: 'Estrella de Favoritos / Marcadores',
+                category: 'Guardados',
+                icon: 'fa-regular fa-star',
+                purpose: 'Guarda el sitio web actual en tus marcadores para acceder rápidamente a él en el futuro.',
+                shortcut: 'Ctrl + D',
+                question: '¿Qué icono utilizas para guardar una página web en tus Marcadores / Favoritos?'
+            },
+            {
+                id: 'barra-marcadores',
+                name: 'Barra de Marcadores',
+                category: 'Accesos Rápidos',
+                icon: 'fa-solid fa-bookmark',
+                purpose: 'Tira horizontal que guarda accesos directos visibles a tus páginas web preferidas.',
+                shortcut: 'Ctrl + Shift + O (Administrador)',
+                question: '¿Qué barra horizontal contiene accesos directos a tus páginas favoritas guardadas?'
+            },
+            {
+                id: 'extensiones',
+                name: 'Botón de Extensiones',
+                category: 'Complementos',
+                icon: 'fa-solid fa-puzzle-piece',
+                purpose: 'Permite gestionar y activar complementos o pequeñas aplicaciones instaladas en Chrome.',
+                shortcut: 'No predeterminado',
+                question: '¿Qué icono en forma de pieza de rompecabezas gestiona los complementos instalados?'
+            },
+            {
+                id: 'perfil-usuario',
+                name: 'Perfil de Usuario / Cuenta',
+                category: 'Personalización',
+                icon: 'fa-solid fa-user-circle',
+                purpose: 'Muestra la cuenta de Google vinculada y permite cambiar de usuario o activar sincronización.',
+                shortcut: 'No predeterminado',
+                question: '¿Dónde haces clic para gestionar tu cuenta de Google o sincronizar tus datos?'
+            },
+            {
+                id: 'menu-opciones',
+                name: 'Menú de Opciones (Tres puntos)',
+                category: 'Configuración',
+                icon: 'fa-solid fa-ellipsis-vertical',
+                purpose: 'Abre el menú principal de Chrome con acceso a Historial, Descargas, Zoom, Configuración e Impresión.',
+                shortcut: 'Alt + F  o  Alt + E',
+                question: '¿Qué botón abre el menú general del navegador con el Historial, Descargas y Configuración?'
+            },
+            {
+                id: 'controles-ventana',
+                name: 'Controles de Ventana',
+                category: 'Sistema',
+                icon: 'fa-solid fa-window-minimize',
+                purpose: 'Botones que sirven para minimizar, maximizar o cerrar la ventana completa del navegador.',
+                shortcut: 'Alt + F4 (Cerrar)',
+                question: '¿Qué botones en la esquina superior permiten Minimizar, Maximizar y Cerrar el navegador?'
+            },
+            {
+                id: 'area-contenido',
+                name: 'Área de Contenido Web',
+                category: 'Visualización',
+                icon: 'fa-solid fa-desktop',
+                purpose: 'Espacio principal donde se despliega y muestra todo el diseño e información de la página web.',
+                shortcut: 'F11 (Pantalla completa)',
+                question: '¿Qué gran zona ocupa la mayor parte de la ventana mostrando las imágenes y texto del sitio?'
+            }
+        ];
+
+        // Estado del juego
+        let currentMode = 'explore'; // 'explore', 'match', 'quiz'
+        let soundEnabled = true;
+        let score = 0;
+        let timerInterval = null;
+        let timeLeft = 120 * 60; // 120 minutos en segundos
+        let selectedCardId = null; // Para el modo relacionar
+        let discoveredElements = new Set();
+        let remainingMatchElements = [];
+        let quizQuestions = [];
+        let currentQuizIndex = 0;
+        let quizStreak = 0;
+        let quizCorrectAnswers = 0;
+
+        // Contexto de Web Audio API para efectos de sonido sintéticos
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(160, now + 0.12);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'win') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.1);
+                    osc.frequency.setValueAtTime(659.25, now + 0.2);
+                    osc.frequency.setValueAtTime(880, now + 0.3);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            } catch (e) {
+                console.log('Audio init error', e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                playSound('click');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+            }
+        }
+
+        window.onload = function() {
+            initGame();
+        };
+
+        function initGame() {
+            setupHotspots();
+            setGameMode('explore');
+        }
+
+        // Cambiar entre modos de juego
+        function setGameMode(mode) {
+            playSound('click');
+            currentMode = mode;
+            clearInterval(timerInterval);
+
+            // Actualizar botones de navegación del modo
+            const btnExplore = document.getElementById('btn-mode-explore');
+            const btnMatch = document.getElementById('btn-mode-match');
+            const btnQuiz = document.getElementById('btn-mode-quiz');
+            
+            const activeClass = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-blue-600 text-white shadow-md';
+            const inactiveClass = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all flex items-center gap-1.5';
+
+            btnExplore.className = mode === 'explore' ? activeClass : inactiveClass;
+            btnMatch.className = mode === 'match' ? activeClass : inactiveClass;
+            btnQuiz.className = mode === 'quiz' ? activeClass : inactiveClass;
+
+            // Mostrar u ocultar el hotspot del marcador de favorito según el modo
+            const starElem = document.querySelector('[data-id="estrella-marcadores"]');
+            if (starElem) {
+                if (mode === 'match') {
+                    starElem.classList.add('hidden');
+                } else {
+                    starElem.classList.remove('hidden');
+                }
+            }
+
+            // Paneles laterales
+            const infoCard = document.getElementById('info-card');
+            const matchPanel = document.getElementById('match-card-panel');
+            const quizPanel = document.getElementById('quiz-card-panel');
+            const scoreContainer = document.getElementById('score-container');
+            const timerBox = document.getElementById('timer-box');
+            const btnReset = document.getElementById('btn-reset');
+
+            infoCard.classList.add('hidden');
+            matchPanel.classList.add('hidden');
+            quizPanel.classList.add('hidden');
+            scoreContainer.classList.add('hidden');
+            timerBox.classList.add('hidden');
+            btnReset.classList.add('hidden');
+
+            // Restablecer estilos de zonas e indicadores
+            resetHotspotsVisuals();
+
+            if (mode === 'explore') {
+                document.getElementById('mode-title').textContent = 'Modo Exploración Libre';
+                document.getElementById('mode-desc').textContent = 'Haz clic o pasa el cursor sobre cada elemento del navegador para descubrir su nombre y función.';
+                document.getElementById('mode-icon').className = 'fa-solid fa-compass';
+                infoCard.classList.remove('hidden');
+                updateDiscoveredCount();
+            } else if (mode === 'match') {
+                document.getElementById('mode-title').textContent = 'Modo Relacionar Elementos';
+                document.getElementById('mode-desc').textContent = 'Selecciona una tarjeta y haz clic sobre el lugar correcto en el navegador.';
+                document.getElementById('mode-icon').className = 'fa-solid fa-object-group';
+                matchPanel.classList.remove('hidden');
+                scoreContainer.classList.remove('hidden');
+                btnReset.classList.remove('hidden');
+                startMatchGame();
+            } else if (mode === 'quiz') {
+                document.getElementById('mode-title').textContent = 'Desafío Pregunta y Señala';
+                document.getElementById('mode-desc').textContent = 'Lee la pregunta y haz clic inmediatamente en la zona correspondiente de la ventana.';
+                document.getElementById('mode-icon').className = 'fa-solid fa-bolt text-yellow-400';
+                quizPanel.classList.remove('hidden');
+                scoreContainer.classList.remove('hidden');
+                timerBox.classList.remove('hidden');
+                btnReset.classList.remove('hidden');
+                startQuizGame();
+            }
+        }
+
+        function setupHotspots() {
+            const hotspots = document.querySelectorAll('.chrome-element-hotspot');
+            
+            hotspots.forEach(elem => {
+                const id = elem.getAttribute('data-id');
+
+                // Hover en modo exploración
+                elem.addEventListener('mouseenter', () => {
+                    if (currentMode === 'explore') {
+                        highlightElement(id);
+                    }
+                });
+
+                // Clic en cualquier modo
+                elem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleElementClick(id);
+                });
+
+                // Soporte para Arrastrar y Soltar (Drag and Drop)
+                elem.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (currentMode === 'match') {
+                        const dropZone = elem.querySelector('.drop-zone');
+                        if (dropZone) dropZone.classList.add('drop-target-active');
+                    }
+                });
+
+                elem.addEventListener('dragleave', () => {
+                    if (currentMode === 'match') {
+                        const dropZone = elem.querySelector('.drop-zone');
+                        if (dropZone) dropZone.classList.remove('drop-target-active');
+                    }
+                });
+
+                elem.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (currentMode === 'match') {
+                        const draggedId = e.dataTransfer.getData('text/plain');
+                        const dropZone = elem.querySelector('.drop-zone');
+                        if (dropZone) dropZone.classList.remove('drop-target-active');
+                        checkMatchPair(draggedId, id);
+                    }
+                });
+            });
+        }
+
+        function resetHotspotsVisuals() {
+            document.querySelectorAll('.drop-zone').forEach(dz => {
+                dz.classList.add('opacity-0');
+                dz.classList.remove('drop-target-correct', 'drop-target-wrong', 'drop-target-active');
+                dz.style.opacity = '0';
+            });
+        }
+
+        function highlightElement(id) {
+            const item = CHROME_ELEMENTS.find(e => e.id === id);
+            if (!item) return;
+
+            // Marcar como descubierto
+            discoveredElements.add(id);
+            updateDiscoveredCount();
+
+            // Mostrar información
+            document.getElementById('info-title').textContent = item.name;
+            document.getElementById('info-badge-icon').innerHTML = `<i class="${item.icon}"></i>`;
+            document.getElementById('info-tag').textContent = item.category;
+            document.getElementById('info-desc').textContent = item.purpose;
+            
+            const infoExtra = document.getElementById('info-extra');
+            infoExtra.classList.remove('hidden');
+            document.getElementById('info-purpose').textContent = item.purpose;
+            document.getElementById('info-shortcut').textContent = item.shortcut;
+        }
+
+        function updateDiscoveredCount() {
+            document.getElementById('discovered-count').textContent = `${discoveredElements.size} / ${CHROME_ELEMENTS.length}`;
+        }
+
+        function startMatchGame() {
+            score = 0;
+            selectedCardId = null;
+            document.getElementById('score-val').textContent = score;
+            
+            // Excluir la Estrella de Favoritos / Marcadores del modo relacionar
+            remainingMatchElements = CHROME_ELEMENTS.filter(e => e.id !== 'estrella-marcadores');
+            renderMatchCards();
+        }
+
+        function renderMatchCards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            document.getElementById('cards-remaining').textContent = `${remainingMatchElements.length} restantes`;
+
+            if (remainingMatchElements.length === 0) {
+                // Victoria en modo relacionar
+                playSound('win');
+                showVictoryModal(score, '100%');
+                return;
+            }
+
+            // Mezclar tarjetas
+            const shuffled = [...remainingMatchElements].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `card-drag bg-slate-800 hover:bg-slate-750 border ${selectedCardId === item.id ? 'border-blue-500 bg-blue-950/40' : 'border-slate-700'} p-3 rounded-xl cursor-pointer flex items-center justify-between transition-all`;
+                card.draggable = true;
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-blue-400 text-xs">
+                            <i class="${item.icon}"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200">${item.name}</span>
+                    </div>
+                    <i class="fa-solid fa-grip-vertical text-slate-500 text-xs"></i>
+                `;
+
+                // Clic para seleccionar
+                card.onclick = () => {
+                    playSound('click');
+                    selectedCardId = item.id;
+                    renderMatchCards();
+                };
+
+                // Drag start
+                card.ondragstart = (e) => {
+                    selectedCardId = item.id;
+                    e.dataTransfer.setData('text/plain', item.id);
+                };
+
+                container.appendChild(card);
+            });
+        }
+
+        function checkMatchPair(cardId, targetId) {
+            if (!cardId) return;
+
+            const targetHotspot = document.querySelector(`.chrome-element-hotspot[data-id="${targetId}"]`);
+            const dropZone = targetHotspot ? targetHotspot.querySelector('.drop-zone') : null;
+
+            if (cardId === targetId) {
+                // Correcto
+                playSound('correct');
+                score += 10;
+                document.getElementById('score-val').textContent = score;
+
+                if (dropZone) {
+                    dropZone.style.opacity = '1';
+                    dropZone.classList.remove('opacity-0');
+                    dropZone.classList.add('drop-target-correct');
+                }
+
+                // Remover de la lista
+                remainingMatchElements = remainingMatchElements.filter(e => e.id !== cardId);
+                selectedCardId = null;
+
+                showOverlayMessage('¡Correcto!', 'emerald');
+
+                setTimeout(() => {
+                    renderMatchCards();
+                }, 400);
+
+            } else {
+                // Incorrecto
+                playSound('wrong');
+                if (dropZone) {
+                    dropZone.style.opacity = '1';
+                    dropZone.classList.remove('opacity-0');
+                    dropZone.classList.add('drop-target-wrong');
+                    setTimeout(() => {
+                        dropZone.classList.remove('drop-target-wrong');
+                        dropZone.style.opacity = '0';
+                    }, 800);
+                }
+
+                showOverlayMessage('¡Sigue intentando!', 'rose');
+            }
+        }
+
+        function startQuizGame() {
+            score = 0;
+            quizStreak = 0;
+            quizCorrectAnswers = 0;
+            currentQuizIndex = 0;
+            timeLeft = 120 * 60;
+
+            document.getElementById('score-val').textContent = score;
+            updateTimerDisplay();
+            document.getElementById('quiz-streak').innerHTML = `<i class="fa-solid fa-fire"></i> Racha: ${quizStreak}`;
+
+            // Seleccionar 10 preguntas aleatorias
+            quizQuestions = [...CHROME_ELEMENTS].sort(() => Math.random() - 0.5).slice(0, 10);
+
+            renderQuizQuestion();
+
+            // Iniciar Temporizador
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    finishQuizGame();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            document.getElementById('timer-val').textContent = formatted;
+        }
+
+        function renderQuizQuestion() {
+            if (currentQuizIndex >= quizQuestions.length) {
+                finishQuizGame();
+                return;
+            }
+
+            const current = quizQuestions[currentQuizIndex];
+            document.getElementById('quiz-step').textContent = `Pregunta ${currentQuizIndex + 1} de ${quizQuestions.length}`;
+            document.getElementById('quiz-question').textContent = current.question;
+            
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.className = 'hidden p-3 rounded-xl border text-xs font-semibold text-center';
+
+            document.getElementById('btn-next-question').classList.add('hidden');
+        }
+
+        function handleQuizAnswer(targetId) {
+            const current = quizQuestions[currentQuizIndex];
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('hidden');
+
+            if (targetId === current.id) {
+                // Correcto
+                playSound('correct');
+                quizStreak++;
+                quizCorrectAnswers++;
+                const points = 10 + (quizStreak * 2);
+                score += points;
+                document.getElementById('score-val').textContent = score;
+                document.getElementById('quiz-streak').innerHTML = `<i class="fa-solid fa-fire text-amber-400"></i> Racha: ${quizStreak}`;
+
+                feedback.className = 'p-3 rounded-xl border text-xs font-semibold text-center bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> ¡Correcto! Es el/la <strong>${current.name}</strong> (+${points} pts)`;
+
+                // Mostrar botón siguiente
+                document.getElementById('btn-next-question').classList.remove('hidden');
+
+            } else {
+                // Incorrecto
+                playSound('wrong');
+                quizStreak = 0;
+                document.getElementById('quiz-streak').innerHTML = `<i class="fa-solid fa-fire text-slate-500"></i> Racha: 0`;
+
+                feedback.className = 'p-3 rounded-xl border text-xs font-semibold text-center bg-red-500/10 border-red-500/30 text-red-400';
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> No es correcto. El elemento buscado era: <strong>${current.name}</strong>`;
+
+                document.getElementById('btn-next-question').classList.remove('hidden');
+            }
+        }
+
+        function nextQuizQuestion() {
+            playSound('click');
+            currentQuizIndex++;
+            renderQuizQuestion();
+        }
+
+        function finishQuizGame() {
+            clearInterval(timerInterval);
+            playSound('win');
+            const accuracy = Math.round((quizCorrectAnswers / quizQuestions.length) * 100);
+            showVictoryModal(score, `${accuracy}%`);
+        }
+
+        function handleElementClick(id) {
+            if (currentMode === 'explore') {
+                highlightElement(id);
+                playSound('click');
+            } else if (currentMode === 'match') {
+                if (selectedCardId) {
+                    checkMatchPair(selectedCardId, id);
+                } else {
+                    highlightElement(id);
+                }
+            } else if (currentMode === 'quiz') {
+                const feedback = document.getElementById('quiz-feedback');
+                if (feedback.classList.contains('hidden')) {
+                    handleQuizAnswer(id);
+                }
+            }
+        }
+
+        function showOverlayMessage(msg, color) {
+            const overlay = document.getElementById('canvas-overlay');
+            const msgBox = document.getElementById('overlay-msg');
+
+            msgBox.textContent = msg;
+            if (color === 'emerald') {
+                msgBox.className = 'bg-emerald-900/90 text-emerald-200 border border-emerald-500/40 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-2xl';
+            } else {
+                msgBox.className = 'bg-red-900/90 text-red-200 border border-red-500/40 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-2xl';
+            }
+
+            overlay.style.opacity = '1';
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+            }, 900);
+        }
+
+        function showVictoryModal(finalScore, accuracyStr) {
+            document.getElementById('modal-score-val').textContent = finalScore;
+            document.getElementById('modal-accuracy-val').textContent = accuracyStr;
+            document.getElementById('modal-victory').classList.remove('hidden');
+        }
+
+        function closeVictoryModal() {
+            document.getElementById('modal-victory').classList.add('hidden');
+        }
+
+        function restartMode() {
+            closeVictoryModal();
+            setGameMode(currentMode);
+        }
+
+        function resetCurrentGame() {
+            playSound('click');
+            setGameMode(currentMode);
+        }
+    </script>
+</body>
+</html>
